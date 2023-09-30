@@ -262,7 +262,7 @@ function action3_add_additional_files ()
         return -1
     fi
 
-    cp -r "$emacs_build_root/additional_files/*" "$emacs_install_dir"
+    cp -r "$emacs_build_root/additional_files/"* "$emacs_install_dir"
 }
 
 function action4_package_emacs ()
