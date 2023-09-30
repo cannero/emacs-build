@@ -1,0 +1,13 @@
+diff --git a/src/w32fns.c b/src/w32fns.c
+index 07b389df84a..f1c2d885f46 100644
+--- a/src/w32fns.c
++++ b/src/w32fns.c
+@@ -276,7 +276,7 @@ #define MENU_FREE_DELAY 1000
+ int w32_build_number;
+ 
+ /* If the OS is set to use dark mode.  */
+-BOOL w32_darkmode = FALSE;
++BOOL w32_darkmode = TRUE;
+ 
+ /* Distinguish between Windows NT and Windows 95.  */
+ int os_subtype;
