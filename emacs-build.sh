@@ -415,7 +415,7 @@ $build_type
 etc
 lib/((?!emacs)(?!gcc)(?![^/]*\.(a|o)$))
 lib/.*\.exe
-.*share/((?!licenses))
+.*share/((?!licenses)(?!hunspell))
 usr/lib/cmake
 usr/lib/gettext
 usr/lib/pkgconfig
