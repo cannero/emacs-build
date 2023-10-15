@@ -428,7 +428,7 @@ var
 "
 
 packing_slim_exclusion="
-.*share/((?!emacs)(?!icons)(?!info)(?!licenses))
+.*share/((?!emacs)(?!icons)(?!info)(?!licenses)(?!hunspell))
 .*share/emacs/.*/lisp/leim
 "
 
