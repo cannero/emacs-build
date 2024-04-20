@@ -257,6 +257,8 @@ function action3_package_deps ()
 
 function action3_add_additional_files ()
 {
+    # Copy the files from the additional_files directory to the install directory
+    #
     if [ ! -d "$emacs_build_root" ]; then
         echo "$emacs_install_dir does not exist, action must be run after install step"
         return -1
@@ -386,6 +388,7 @@ msvcrt
 pthread
 shell32
 user32
+hunspell-
 "
 
 exe_inclusions="
@@ -400,6 +403,7 @@ etags
 ld
 objdump
 gzip
+hunspell
 "
 
 dependency_slim_exclusions="
@@ -411,7 +415,7 @@ $build_type
 etc
 lib/((?!emacs)(?!gcc)(?![^/]*\.(a|o)$))
 lib/.*\.exe
-.*share/((?!licenses))
+.*share/((?!licenses)(?!hunspell))
 usr/lib/cmake
 usr/lib/gettext
 usr/lib/pkgconfig
@@ -424,7 +428,7 @@ var
 "
 
 packing_slim_exclusion="
-.*share/((?!emacs)(?!icons)(?!info)(?!licenses))
+.*share/((?!emacs)(?!icons)(?!info)(?!licenses)(?!hunspell))
 .*share/emacs/.*/lisp/leim
 "
 
