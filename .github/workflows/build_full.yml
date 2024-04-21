@@ -78,7 +78,7 @@ jobs:
 
       - name: Package Emacs
         if: runner.os == 'Windows'
-        run: .\emacs-build.cmd --nativecomp --slim --debug-dependencies --with-rsvg --hunspell --add-additional-files --pack-all
+        run: .\emacs-build.cmd --nativecomp --slim --with-rsvg --hunspell --add-additional-files --pack-all
       - name: Build and pack Emacs
         if: runner.os != 'Windows'
         run: |
