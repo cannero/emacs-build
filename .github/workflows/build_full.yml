@@ -38,7 +38,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Msys2
         uses: msys2/setup-msys2@v2
@@ -89,7 +89,7 @@ jobs:
       # Upload everything
       - name: Upload binaries
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: emacs-packages
           path: zips/*
@@ -103,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download binaries
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: emacs-packages
       - run: ls -R
@@ -111,7 +111,7 @@ jobs:
       # Create release
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.build.outputs.version }}
           name: emacs_${{ needs.build.outputs.version }}
