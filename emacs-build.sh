@@ -43,18 +43,18 @@ function write_help () {
 }
 
 function write_features () {
-    local inactive=""
-    for f in $all_features; do
-        if [[ ! " $features " =~ .*$f ]]; then
-            inactive="$f $inactive"
-        fi
-    done
+    # local inactive=""
+    # for f in $all_features; do
+    #     if [[ ! " $features " =~ .*$f ]]; then
+    #         inactive="$f $inactive"
+    #     fi
+    # done
 
     echo "Compressed installation: $emacs_compress_files"
     echo "Strip executables: $emacs_strip_executables"
     echo "Emacs features:"
     for f in $features; do echo "  --with-$f"; done
-    for f in $inactive; do echo " --without $f"; done
+    for f in $inactive_features; do echo " --without-$f"; done
 }
 
 function write_version_number ()
@@ -144,7 +144,7 @@ function emacs_dependencies ()
 function emacs_configure_build_dir ()
 {
     cd "$emacs_build_dir"
-    options="--disable-build-details --without-dbus"
+    options="$emacs_build_options"
     if test "$emacs_compress_files" = "no"; then
         options="$options --without-compress-install"
     else
@@ -155,13 +155,21 @@ function emacs_configure_build_dir ()
         options="$options --with-small-ja-dic"
     fi
 
-    for f in $all_features; do
-        if echo $features | grep $f > /dev/null; then
-            options="--with-$f $options"
-        else
-            options="--without-$f $options"
-        fi
+    # for f in $all_features; do
+    #     if echo $features | grep $f > /dev/null; then
+    #         options="--with-$f $options"
+    #     else
+    #         options="--without-$f $options"
+    #     fi
+    # done
+    for f in $features; do
+        options="$options --with-$f"
     done
+
+    for f in $inactive_features; do
+        options="$options --without-$f"
+    done
+
     echo Configuring Emacs with options
     echo   "$emacs_source_dir/configure" "--prefix=$emacs_install_dir" CFLAGS="$CFLAGS" $options
     if "$emacs_source_dir/configure" "--prefix=$emacs_install_dir" CFLAGS="$CFLAGS" $options; then
@@ -185,14 +193,9 @@ function action0_clean_rest ()
 
 function action0_clone ()
 {
-    clone_repo "$emacs_branch" "$emacs_repo" "$emacs_source_dir" "$emacs_branch_name" "$emacs_depth"
+    clone_repo "$emacs_branch" "$emacs_repo" "$emacs_source_dir"
     if test "$emacs_apply_patches" = "yes"; then
         apply_patches "$emacs_source_dir" || true
-    fi
-
-    if test $GITHUB_ENV; then
-        echo "EMACS_COMMIT=`git_version $emacs_source_dir`" >> $GITHUB_ENV
-        echo "EMACS_MAJOR_VER=`cat $emacs_source_dir/configure.ac | grep -Po 'AC_INIT\(.*\[\K\d+'`" >> $GITHUB_ENV
     fi
 }
 
@@ -204,32 +207,43 @@ function action1_ensure_packages ()
     ensure_packages `emacs_root_packages`
 }
 
-function action2_build ()
+function action2.0_prep_build ()
 {
-    echo start building
-    rm -f "$emacs_install_dir/bin/emacs.exe"
+    echo Preparing build directory
+    prepare_source_dir $emacs_source_dir \
+        && prepare_build_dir $emacs_build_dir \
+        && emacs_configure_build_dir && return 0
 
-    # See https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-emacs/PKGBUILD
-    _sanity_check=$([[ "${MSYSTEM}" != MINGW* ]] || echo yes)
-
-    if prepare_source_dir $emacs_source_dir \
-            && prepare_build_dir $emacs_build_dir && emacs_configure_build_dir; then
-        echo Building Emacs in directory $emacs_build_dir
-        if [[ "$_sanity_check" == "yes" ]]; then
-            make -j $emacs_build_threads -C $emacs_build_dir && return 0
-        else
-            make -j $emacs_build_threads -C $emacs_build_dir actual-all && return 0
-        fi
-    fi
-    echo Configuration and build process failed
+    echo Configuration failed
     return -1
 }
 
-function action2_install ()
+function action2.1_build ()
+{
+    echo Start building
+    rm -f "$emacs_install_dir/bin/emacs.exe"
+
+    # See https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-emacs/PKGBUILD
+    # _sanity_check=$([[ "${MSYSTEM}" != MINGW* ]] || echo yes)
+    _sanity_check=$(echo yes)
+
+    echo Building Emacs in directory $emacs_build_dir
+    if [[ "$_sanity_check" == "yes" ]]; then
+        make -j $emacs_build_threads -C $emacs_build_dir && return 0
+        # make -j $emacs_build_threads -C $emacs_build_dir && return 0
+    else
+        make -j $emacs_build_threads -C $emacs_build_dir actual-all && return 0
+    fi
+
+    echo Build process failed
+    return -1
+}
+
+function action2.2_install ()
 {
     if test -f "$emacs_install_dir/bin/emacs.exe"; then
         echo $emacs_install_dir/bin/emacs.exe exists
-        echo refusing to reinstall
+        echo Refusing to reinstall
     else
         rm -rf "$emacs_install_dir"
         mkdir -p "$emacs_install_dir/bin"
@@ -284,6 +298,15 @@ function action3_add_additional_files ()
     cp -r "$emacs_build_root/additional_files/"* "$emacs_install_dir"
 }
 
+function write_source_info ()
+{
+    cd "$emacs_full_install_dir"
+    cat <<EOF > source_info.txt
+repo: $emacs_repo
+branch/commit: $emacs_branch
+EOF
+}
+
 function action4_package_emacs ()
 {
     # Package a prebuilt emacs with and without the required dependencies, ready
@@ -296,14 +319,15 @@ function action4_package_emacs ()
     rm -f "$emacs_nodepsfile" "$emacs_srcfile"
     mkdir -p `dirname "$emacs_nodepsfile"`
     cd "$emacs_install_dir"
-    if zip -9vr "$emacs_nodepsfile" *; then
+    if zip -9r "$emacs_nodepsfile" *; then
         echo Built $emacs_nodepsfile; echo
     else
         echo Failed to compress distribution file $emacs_nodepsfile; echo
         return -1
     fi
+    write_source_info
     cd "$emacs_source_dir"
-    if zip -x '.git/*' -9vr "$emacs_srcfile" *; then
+    if zip -x '.git/*' -9r "$emacs_srcfile" *; then
         echo Built source package $emacs_srcfile
     else
         echo Failed to compress sources $emacs_srcfile; echo
@@ -323,7 +347,7 @@ function action5_package_all ()
     done
     rm -rf "$emacs_full_install_dir"
     if cp -rfp "$emacs_install_dir" "$emacs_full_install_dir"; then
-        rm -f "$emacs_distfile"
+        rm -f "${emacs_distfile}"
         cd "$emacs_full_install_dir"
         for zipfile in "$emacs_depsfile" $emacs_extensions; do
             echo Unzipping $zipfile
@@ -334,13 +358,24 @@ function action5_package_all ()
                 return -1
             fi
         done
+
         emacs_build_strip_exes "$emacs_full_install_dir"
-        if test "$emacs_compress_files" = "no"; then
-            xargs zip -9v "$emacs_distfile" ./*
+        find . -type f | sort | list_filter -i "$packing_slim_exclusion" | xargs rm -f
+        write_source_info
+
+        if test "$emacs_pkg_msix" = "yes"; then
+            man_file=`cygpath -w "$emacs_build_root/template/appxmanifest.t.xml"`
+            pkg_version="${EMACS_PKG_VERSION:-0.0.0.0}"
+            dist_file=`cygpath -w "$emacs_build_root/zips/${emacs_pkg_prefix}.msix"`
+            script_file=`cygpath -w "$emacs_build_root/scripts/create_msix.ps1"`
+            cert_file=`cygpath -w "$emacs_build_root/certs/emacs-cert.pfx"`
+            secret="${EMACS_CERT_SECRET:-cert!emacs}"
+
+            echo Creating $dist_file package with version $pkg_version
+            powershell.exe -nop -ex bypass -c "& {$script_file -m $man_file -v $pkg_version -d . -p $dist_file -c $cert_file -s $secret}"
         else
-            # find . -type f | sort | dependency_filter > a.txt
-            find . -type f | sort | dependency_filter "$packing_slim_exclusion" \
-                | xargs zip -9v "$emacs_distfile"
+            echo Creating zip package
+            zip -9 -r "${emacs_distfile}" *
         fi
     fi
 }
@@ -352,7 +387,9 @@ gif mingw-giflib
 gnutls mingw-gnutls
 harfbuzz mingw-harfbuzz
 jpeg mingw-libjpeg-turbo
+json mingw-jansson
 lcms2 mingw-lcms2
+native-compilation mingw-libgccjit
 png mingw-libpng
 rsvg mingw-librsvg
 tiff mingw-libtiff
@@ -361,36 +398,26 @@ xml2 mingw-libxml2
 xpm mingw-xpm-nox
 zlib mingw-zlib
 EOF
-    # emacs30 has built-in json without lib-jansson
-    # echo json mingw-jansson
 
-    if test "$emacs_nativecomp" = yes; then
-        echo native-compilation mingw-libgccjit
-    fi
 }
 
 function delete_feature () {
     features=`echo $features | sed -e "s,$1,,"`
+    inactive_features="$1 $inactive_features"
 }
 
 function add_all_features () {
     features="$all_features"
+    inactive_features=""
 }
 
 function add_feature () {
+    inactive_features=`echo $inactive_features | sed -e "s,$1,,"`
     features="$1 $features"
 }
 
 function add_actions () {
     actions="$actions $*"
-}
-
-function dependency_filter () {
-    if test -z "$1"; then
-        cat -
-    else
-        grep -P -v "^(`echo $1 | sed 's,[ \n],|,g'`)" -
-    fi
 }
 
 check_mingw_architecture
@@ -452,47 +479,47 @@ packing_slim_exclusion="
 
 dependency_exclusions=""
 all_features=`feature_list | cut -f 1 -d ' '`
-features="$all_features"
+add_all_features
 
 actions=""
 do_clean=""
-debug_dependency_list="false"
+debug_dependency_list=no
 emacs_compress_files=no
 emacs_build_version=0.4
 emacs_slim_build=no
-emacs_nativecomp=no
 emacs_build_threads=$((`nproc`*2))
+emacs_build_options="--disable-build-details --without-dbus --enable-link-time-optimization"
 emacs_apply_patches=yes
+emacs_pkg_msix=no
 # This is needed for pacman to return the right text
 export LANG=C
 emacs_repo=https://github.com/emacs-mirror/emacs.git
 emacs_branch=""
-emacs_depth=""
 emacs_build_root=`pwd`
 emacs_build_git_dir="$emacs_build_root/git"
 emacs_build_build_dir="$emacs_build_root/build"
 emacs_build_install_dir="$emacs_build_root/pkg"
 emacs_build_zip_dir="$emacs_build_root/zips"
 emacs_strip_executables="no"
+emacs_pkg_var=""
 
 # CFLAGS="-Ofast -fno-finite-math-only \
 #         -fassociative-math -fno-signed-zeros -frename-registers -funroll-loops \
 #         -fomit-frame-pointer \
 #         -fallow-store-data-races  -fno-semantic-interposition -floop-parallelize-all -ftree-parallelize-loops=4"
-CFLAGS="-O2 -fno-semantic-interposition -floop-parallelize-all -ftree-parallelize-loops=4"
+CFLAGS="-O2 -fno-semantic-interposition -floop-parallelize-all -ftree-parallelize-loops=4 -g3 $CFLAGS"
 
 while test -n "$*"; do
     case $1 in
         --threads) shift; emacs_build_threads="$1";;
         --repo) shift; emacs_repo="$1";;
         --branch) shift; emacs_branch="$1";;
-        --depth) shift; emacs_depth="$1";;
         --no-patches) emacs_apply_patches=no;;
         --with-all) add_all_features;;
         --without-*) delete_feature `echo $1 | sed -e 's,--without-,,'`;;
         --with-*) add_feature `echo $1 | sed -e 's,--with-,,'`;;
-        --nativecomp) emacs_nativecomp=yes;;
-        --nativecomp-aot) emacs_nativecomp=yes; export NATIVE_FULL_AOT=1;;
+        --enable-*|--disable-*) emacs_build_options="$emacs_build_options $1";;
+        --nativecomp-aot) export NATIVE_FULL_AOT=1;;
         --slim) add_all_features
                 delete_feature cairo # We delete features here, so that user can repopulate them
                 delete_feature rsvg
@@ -505,20 +532,25 @@ while test -n "$*"; do
         --compress) emacs_compress_files=yes;;
         --no-compress) emacs_compress_files=no;;
         --debug) set -x;;
-        --debug-dependencies) debug_dependency_list="true";;
+        --debug-dependencies) debug_dependency_list=yes;;
 
         --clean) add_actions action0_clean;;
         --clean-all) add_actions action0_clean action0_clean_rest;;
         --clone) add_actions action0_clone;;
         --ensure) add_actions action1_ensure_packages;;
-        --build) add_actions action1_ensure_packages action2_build;;
+        --configure) add_actions action2.0_prep_build;;
+        --build-dev) add_actions action2.1_build;;
+        --build) add_actions action1_ensure_packages action2.0_prep_build action2.1_build;;
         --deps) add_actions action1_ensure_packages action3_package_deps;;
-        --pack-emacs) add_actions action2_install action4_package_emacs;;
-        --pack-all) add_actions action1_ensure_packages action3_package_deps action2_install action5_package_all;;
-        # --pack-all) add_actions action1_ensure_packages action2_install;;
+        --pack-emacs) add_actions action2.2_install action4_package_emacs;;
+        --pack-all) add_actions action1_ensure_packages action3_package_deps action2.2_install action5_package_all;;
+        --msix) emacs_pkg_msix=yes;;
+        # --pack-all) add_actions action1_ensure_packages action2.2_install;;
 
-        --pdf-tools) add_actions action2_install action3_pdf_tools;;
-        --mu) add_actions action2_install action3_mu;;
+        --variant) shift; emacs_pkg_var="-$1";;
+
+        --pdf-tools) add_actions action2.2_install action3_pdf_tools;;
+        --mu) add_actions action2.2_install action3_mu;;
         --isync) add_actions action3_isync;;
         --aspell) add_actions action3_aspell;;
         --hunspell) add_actions action3_hunspell;;
@@ -529,7 +561,6 @@ while test -n "$*"; do
         --test-isync) add_actions test_isync;;
         --test-aspell) add_actions test_aspell;;
 
-
         -?|-h|--help) write_help; exit 0;;
         --features) write_features; exit 0;;
         --version) write_version_number;;
@@ -537,10 +568,7 @@ while test -n "$*"; do
     esac
     shift
 done
-if test "$emacs_nativecomp" = "yes"; then
-    all_features=`feature_list | cut -f 1 -d ' '`
-    add_feature native-compilation
-fi
+
 if test "$emacs_slim_build" = "yes"; then
     dependency_exclusions="$dependency_slim_exclusions"
 fi
@@ -549,25 +577,32 @@ if test -z "$emacs_branch"; then
 fi
 actions=`unique_list $actions`
 if test -z "$actions"; then
-    actions="action0_clone action1_ensure_packages action2_build action3_package_deps action5_package_all"
+    actions="action0_clone action1_ensure_packages action2.1_build action3_package_deps action5_package_all"
 fi
 features=`unique_list $features`
+inactive_features=`unique_list $inactive_features`
 ensure_mingw_build_software
 
 emacs_extensions=""
+
 emacs_branch_name=`git_branch_name_to_file_name ${emacs_branch}`
+if test "$emacs_branch_name" != "$emacs_branch"; then
+    echo Emacs branch ${emacs_branch} renamed to ${emacs_branch_name} to avoid filesystem problems.
+fi
+
 emacs_source_dir="$emacs_build_git_dir/$emacs_branch_name"
 emacs_build_dir="$emacs_build_build_dir/$emacs_branch_name-$architecture"
 emacs_install_dir="$emacs_build_install_dir/$emacs_branch_name-$architecture"
 emacs_full_install_dir="${emacs_install_dir}-full"
-emacs_nodepsfile="$emacs_build_root/zips/emacs-${emacs_branch_name}-${architecture}-nodeps.zip"
-emacs_depsfile="$emacs_build_root/zips/emacs-${emacs_branch_name}-${architecture}-deps.zip"
-emacs_distfile="$emacs_build_root/zips/emacs-${emacs_branch_name}-${architecture}-full.zip"
+
+emacs_pkg_prefix="emacs-${emacs_branch_name}-${architecture}${emacs_pkg_var}"
+
+emacs_nodepsfile="$emacs_build_root/zips/${emacs_pkg_prefix}-nodeps.zip"
+emacs_depsfile="$emacs_build_root/zips/${emacs_pkg_prefix}-deps.zip"
+emacs_distfile="$emacs_build_root/zips/${emacs_pkg_prefix}-full.zip"
 emacs_srcfile="$emacs_build_root/zips/emacs-${emacs_branch_name}-src.zip"
 emacs_dependencies=""
-if test "$emacs_branch_name" != "$emacs_branch"; then
-    echo Emacs branch ${emacs_branch} renamed to ${emacs_branch_name} to avoid filesystem problems.
-fi
+
 for action in $actions; do
     if $action 2>&1 ; then
         echo Action $action succeeded.

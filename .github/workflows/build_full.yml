@@ -11,28 +11,62 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
+  prepare_env:
+    name: Prepare build version
+    runs-on: ubuntu-latest
+    env:
+      EMACS_REPO: https://github.com/emacs-mirror/emacs.git
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get build version
+        id: vars
+        run: |
+          mkdir -p ./git/emacs
+          cd ./git/emacs/
+          git clone --depth 1 $EMACS_REPO .
+          ts=`date +'%Y%m%d'`
+          commit=`git rev-parse --short=7 HEAD`
+          major_ver=`cat configure.ac | grep -Po 'AC_INIT\(.*\[\K\d+'`
+          version=`echo ${major_ver}.${{ github.run_number }}.${ts}.${commit}`
+
+          echo "commit=${commit}" >> $GITHUB_ENV
+          echo "version=${version}" >> $GITHUB_ENV
+          echo "pkg_version=${major_ver}.${{ github.run_number }}.0.0" >> $GITHUB_ENV
+    outputs:
+      repo: ${{ env.EMACS_REPO }}
+      version: ${{ env.version }}
+      pkg_version: ${{ env.pkg_version }}
+      commit: ${{ env.commit }}
+
   build:
+    needs: prepare_env
+    name: Build Emacs
     # Matrix strategy from
     # https://github.com/msys2/MINGW-packages/blob/master/.github/workflows/main.yml
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
-            shell: powershell
-            msystem: MINGW64
-          - os: windows-latest
+          - os: windows-2022
             shell: powershell
             msystem: UCRT64
-          - os: ubuntu-latest
+            build_options: --with-rsvg --without-mps --hunspell
+          # - os: windows-2022
+          #   shell: powershell
+          #   msystem: UCRT64
+          #   build_options: --variant mps --with-rsvg --with-mps --no-strip --enable-build-details --hunspell
+          - os: ubuntu-22.04
             shell: bash
+            build_options: --with-rsvg --with-mps --without-xwidgets
 
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
     env:
       MSYS2_DIR: C:\msys64
-      EMACS_REPO: https://github.com/emacs-mirror/emacs.git
+      EMACS_REPO: ${{ needs.prepare_env.outputs.repo }}
+      EMACS_PKG_VERSION: ${{ needs.prepare_env.outputs.pkg_version }}
+      EMACS_CERT_SECRET: ${{ secrets.EMACS_CERT_SECRET }}
 
     defaults:
       run:
@@ -53,73 +87,65 @@ jobs:
       # This is the shortest job, but in this case it pulls all MSYS/MINGW64
       - name: Clone Emacs
         if: runner.os == 'Windows'
-        run: .\emacs-build.cmd --clone --repo %EMACS_REPO% --depth 1
+        run: .\emacs-build.cmd --clone --repo %EMACS_REPO% --branch ${{ needs.prepare_env.outputs.commit }}
 
       - name: Clone Emacs
         if: runner.os != 'Windows'
         run: |
           mkdir -p ./git/emacs
           cd ./git/emacs/
-          git clone --depth 1 $EMACS_REPO .
-          echo "EMACS_COMMIT=`date +'%Y%m%d'`.`git rev-parse --short=7 HEAD`" >> $GITHUB_ENV
-          echo "EMACS_MAJOR_VER=`cat configure.ac | grep -Po 'AC_INIT\(.*\[\K\d+'`" >> $GITHUB_ENV
+          git clone --filter=tree:0 --no-checkout $EMACS_REPO .
+          git checkout ${{ needs.prepare_env.outputs.commit }}
 
-      - name: Set package version
-        run: |
-          echo "EMACS_VER=${{ env.EMACS_MAJOR_VER }}.${{ github.run_number }}.${{ env.EMACS_COMMIT }}" >> $GITHUB_ENV
-        shell: bash
+      - name: Install deps
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: .github/scripts/install-libs.sh
+
+      - name: Install deps
+        if: runner.os != 'Windows'
+        run: sudo .github/scripts/install-libs.sh
 
       - name: Build Emacs
         if: runner.os == 'Windows'
-        uses: Wandalen/wretry.action@master
+        timeout-minutes: 30
+        # Require --with-* flags, else the deps will not be included properly
+        run: |
+          .\emacs-build.cmd --slim --branch ${{ needs.prepare_env.outputs.commit }} --build ${{ matrix.build_options }}
+
+      - name: Install winget
+        if: runner.os == 'Windows'
+        uses: Cyberboss/install-winget@v1
         with:
-          # Require --nativecomp and --with-* flags, else the deps will not be included properly
-          command: |
-            .\emacs-build.cmd --nativecomp --slim --with-rsvg --hunspell --build
-          attempt_limit: 1
-          attempt_delay: 2000
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install MSIXHeroCLI
+        if: runner.os == 'Windows'
+        run: winget install msixhero --disable-interactivity --accept-source-agreements
 
       - name: Package Emacs
         if: runner.os == 'Windows'
-        run: .\emacs-build.cmd --nativecomp --slim --with-rsvg --hunspell --add-additional-files --pack-all
+        run: |
+          $env:MSIXHeroCLI = &where.exe MSIXHeroCLI
+          .\emacs-build.cmd --slim --branch ${{ needs.prepare_env.outputs.commit }} --pack-all ${{ matrix.build_options }} --add-additional-files
+
       - name: Build and pack Emacs
         if: runner.os != 'Windows'
         run: |
           chmod 755 ./emacs-build-unix.sh
           mkdir -p ./zips
-          #./emacs-build-unix.sh -s ./git/emacs/ -v ${{ env.EMACS_VER }} -d ./zips
+          #./emacs-build-unix.sh -s ./git/emacs/ -v ${{ needs.prepare_env.outputs.version }} -d ./zips ${{ matrix.build_options }}
 
-      # Upload everything
-      - name: Upload binaries
+      # Upload release for each build
+      - name: Upload binaries to release
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
+        id: upload_release
+        uses: svenstaro/upload-release-action@v2
         with:
-          name: emacs-packages-${{ matrix.msystem }}
-          path: zips/*
-          if-no-files-found: error
-
-    outputs:
-      version: ${{ env.EMACS_VER }}
-
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download binaries
-        uses: actions/download-artifact@v4
-        with:
-          pattern: emacs-packages-*
-          merge-multiple: true
-      - run: ls -R
-
-      # Create release
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.build.outputs.version }}
-          name: emacs_${{ needs.build.outputs.version }}
+          repo_token: ${{ github.token }}
+          file: ./zips/*{-full.zip,.deb,.msix}
+          file_glob: true
+          tag: v${{ needs.prepare_env.outputs.version }}
+          release_name: emacs_${{ needs.prepare_env.outputs.version }}
+          draft: false
           prerelease: false
-          files: |
-            *-full.zip
-            *.deb
