@@ -393,7 +393,7 @@ native-compilation mingw-libgccjit
 png mingw-libpng
 rsvg mingw-librsvg
 tiff mingw-libtiff
-tree-sitter mingw-tree-sitter
+tree-sitter mingw-libtree-sitter
 xml2 mingw-libxml2
 xpm mingw-xpm-nox
 zlib mingw-zlib
