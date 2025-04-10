@@ -1,7 +1,7 @@
-From a8dd8c8ae724a7e550af1808afa398d2f51ce022 Mon Sep 17 00:00:00 2001
+From 0e5b2004f3a775848ef770b4821e8944b2858993 Mon Sep 17 00:00:00 2001
 From: Kien Nguyen <kien.n.quang@gmail.com>
 Date: Thu, 14 Sep 2023 23:19:25 +0900
-Subject: [PATCH 01/11] .el.elc: ignore byte compile errors
+Subject: [PATCH 01/10] .el.elc: ignore byte compile errors
 
 ---
  Makefile.in      | 2 +-
@@ -9,10 +9,10 @@ Subject: [PATCH 01/11] .el.elc: ignore byte compile errors
  2 files changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/Makefile.in b/Makefile.in
-index 342bec11d8..36178ad821 100644
+index ea05fe6ac9..86311b151d 100644
 --- a/Makefile.in
 +++ b/Makefile.in
-@@ -760,7 +760,7 @@ install-arch-indep:
+@@ -754,7 +754,7 @@ install-arch-indep:
  	[ -z "${GZIP_PROG}" ] || { \
  	  echo "Compressing *.el etc. ..." && \
  	  cd "$(DESTDIR)${lispdir}" && \

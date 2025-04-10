@@ -1,7 +1,14 @@
+<<<<<<<< HEAD:patches/emacs/0010-clang-fixes.patch
 From b63db76cb9cf1a79c28ac6047bd38b7daefa4e8a Mon Sep 17 00:00:00 2001
 From: Kien Nguyen <kien.n.quang@gmail.com>
 Date: Fri, 5 Jul 2024 02:39:23 -0700
 Subject: [PATCH 10/11] clang fixes
+========
+From 8501badcc75298e01889a7170c55e1212263a079 Mon Sep 17 00:00:00 2001
+From: Kien Nguyen <kien.n.quang@gmail.com>
+Date: Fri, 5 Jul 2024 02:39:23 -0700
+Subject: [PATCH 09/10] clang fixes
+>>>>>>>> kiennq/main:patches/emacs/0009-clang-fixes.patch
 
 ---
  nt/mingw-cfg.site | 4 ++++

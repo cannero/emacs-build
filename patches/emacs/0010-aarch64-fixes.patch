@@ -1,7 +1,14 @@
+<<<<<<<< HEAD:patches/emacs/0011-aarch64-fixes.patch
 From 5e12843fa32150d2f18ce21fc6f3ae58732df6a7 Mon Sep 17 00:00:00 2001
 From: Kien Nguyen <kien.n.quang@gmail.com>
 Date: Fri, 5 Jul 2024 02:50:31 -0700
 Subject: [PATCH 11/11] aarch64 fixes
+========
+From 6b15587cbffd7bd39e9ec67ed6e9287fe377e3e8 Mon Sep 17 00:00:00 2001
+From: Kien Nguyen <kien.n.quang@gmail.com>
+Date: Fri, 5 Jul 2024 02:50:31 -0700
+Subject: [PATCH 10/10] aarch64 fixes
+>>>>>>>> kiennq/main:patches/emacs/0010-aarch64-fixes.patch
 
 ---
  configure.ac            |  6 ++++--
@@ -13,10 +20,17 @@ Subject: [PATCH 11/11] aarch64 fixes
  create mode 100644 nt/emacs-ARM64.manifest
 
 diff --git a/configure.ac b/configure.ac
+<<<<<<<< HEAD:patches/emacs/0011-aarch64-fixes.patch
 index f720885c9b..9ad849443a 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -1526,7 +1526,7 @@ AC_DEFUN
+========
+index d73c360d6f..97bdaeada5 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1544,7 +1544,7 @@ AC_DEFUN
+>>>>>>>> kiennq/main:patches/emacs/0010-aarch64-fixes.patch
    ;;
  
    # MinGW64
@@ -25,7 +39,11 @@ index f720885c9b..9ad849443a 100644
      case "${canonical}" in
        *-mingw* )
  		opsys=mingw32
+<<<<<<<< HEAD:patches/emacs/0011-aarch64-fixes.patch
 @@ -2250,6 +2250,7 @@ AC_DEFUN
+========
+@@ -2266,6 +2266,7 @@ AC_DEFUN
+>>>>>>>> kiennq/main:patches/emacs/0010-aarch64-fixes.patch
  if test "$opsys" = "mingw32"; then
    case "$canonical" in
      x86_64-*-mingw*) C_SWITCH_SYSTEM="-mtune=generic" ;;
@@ -33,7 +51,11 @@ index f720885c9b..9ad849443a 100644
      *) C_SWITCH_SYSTEM="-mtune=pentium4" ;;
    esac
  fi
+<<<<<<<< HEAD:patches/emacs/0011-aarch64-fixes.patch
 @@ -3023,6 +3024,7 @@ AC_DEFUN
+========
+@@ -3050,6 +3051,7 @@ AC_DEFUN
+>>>>>>>> kiennq/main:patches/emacs/0010-aarch64-fixes.patch
    EMACSRES="emacs.res"
    case "$canonical" in
      x86_64-*-*) EMACS_MANIFEST="emacs-x64.manifest" ;;
@@ -41,7 +63,11 @@ index f720885c9b..9ad849443a 100644
      *) EMACS_MANIFEST="emacs-x86.manifest" ;;
    esac
    dnl Construct something of the form "24,4,0,0" with 4 components.
+<<<<<<<< HEAD:patches/emacs/0011-aarch64-fixes.patch
 @@ -7422,7 +7424,7 @@ AC_DEFUN
+========
+@@ -7506,7 +7508,7 @@ AC_DEFUN
+>>>>>>>> kiennq/main:patches/emacs/0010-aarch64-fixes.patch
     ## If the values of -image-base are modified, the corresponding
     ## values of DEFAULT_IMAGE_BASE in w32fns.c should be kept in sync.
     case "$canonical" in
@@ -124,10 +150,17 @@ index 0627c4bcad..bb9e530451 100644
     handler, see https://sourceforge.net/p/mingw-w64/mailman/message/32421953/.
     This seems to be an unsolved problem in the MinGW64 runtime.  So we
 diff --git a/src/w32fns.c b/src/w32fns.c
+<<<<<<<< HEAD:patches/emacs/0011-aarch64-fixes.patch
 index 47bb540649..cdbac14cfa 100644
 --- a/src/w32fns.c
 +++ b/src/w32fns.c
 @@ -11499,8 +11499,12 @@ stack_overflow_handler (void)
+========
+index a199666c7f..2f90551809 100644
+--- a/src/w32fns.c
++++ b/src/w32fns.c
+@@ -11504,8 +11504,12 @@ stack_overflow_handler (void)
+>>>>>>>> kiennq/main:patches/emacs/0010-aarch64-fixes.patch
    if (gc_in_progress)
      terminate_due_to_signal (SIGSEGV, 40);
  #ifdef _WIN64
@@ -140,7 +173,11 @@ index 47bb540649..cdbac14cfa 100644
  #else
    sys_longjmp (return_to_command_loop, 1);
  #endif
+<<<<<<<< HEAD:patches/emacs/0011-aarch64-fixes.patch
 @@ -11527,7 +11531,11 @@ my_exception_handler (EXCEPTION_POINTERS * exception_data)
+========
+@@ -11532,7 +11536,11 @@ my_exception_handler (EXCEPTION_POINTERS * exception_data)
+>>>>>>>> kiennq/main:patches/emacs/0010-aarch64-fixes.patch
      {
        /* Call stack_overflow_handler ().  */
  #ifdef _WIN64
