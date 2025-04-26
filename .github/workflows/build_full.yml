@@ -48,15 +48,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2022
+          - os: windows-latest
             shell: powershell
             msystem: UCRT64
             build_options: --with-rsvg --without-mps --hunspell
-          # - os: windows-2022
+          # - os: windows-latest
           #   shell: powershell
           #   msystem: UCRT64
           #   build_options: --variant mps --with-rsvg --with-mps --no-strip --enable-build-details --hunspell
-          - os: ubuntu-22.04
+          - os: ubuntu-latest
             shell: bash
             build_options: --with-rsvg --with-mps --without-xwidgets
 
@@ -100,7 +100,9 @@ jobs:
       - name: Install deps
         if: runner.os == 'Windows'
         shell: msys2 {0}
-        run: .github/scripts/install-libs.sh
+        run: |
+          [[ '${{ matrix.build_options }}' == *'--without-mps'* ]] || .github/scripts/install-libs.sh
+          ./emacs-build.sh --slim --ensure ${{ matrix.build_options }}
 
       - name: Install deps
         if: runner.os != 'Windows'
@@ -111,7 +113,7 @@ jobs:
         timeout-minutes: 30
         # Require --with-* flags, else the deps will not be included properly
         run: |
-          .\emacs-build.cmd --slim --branch ${{ needs.prepare_env.outputs.commit }} --build ${{ matrix.build_options }}
+          .\emacs-build.cmd --slim --branch ${{ needs.prepare_env.outputs.commit }} --configure --build-dev ${{ matrix.build_options }}
 
       - name: Install winget
         if: runner.os == 'Windows'
