@@ -1,7 +1,7 @@
-From 8d5c7688743cb4ec990f948af9a900f11aee4e95 Mon Sep 17 00:00:00 2001
+From 4e329a7bdd31a56025a1ad3cda2c9ff251fc2586 Mon Sep 17 00:00:00 2001
 From: Pip Cet <pipcet@protonmail.com>
 Date: Sun, 27 Oct 2024 18:27:46 -0700
-Subject: [PATCH 06/11] Windows: unaligned jmpbuf support
+Subject: [PATCH 06/10] Windows: unaligned jmpbuf support
 
 ---
  src/alloc.c |   2 +-
@@ -10,10 +10,10 @@ Subject: [PATCH 06/11] Windows: unaligned jmpbuf support
  3 files changed, 160 insertions(+), 36 deletions(-)
 
 diff --git a/src/alloc.c b/src/alloc.c
-index 9ace9fcbbc..06b889b7da 100644
+index d7f0369975..645c10f074 100644
 --- a/src/alloc.c
 +++ b/src/alloc.c
-@@ -2941,7 +2941,7 @@ DEFUN ("make-list", Fmake_list, Smake_list, 2, 2, 0,
+@@ -2971,7 +2971,7 @@ DEFUN ("make-list", Fmake_list, Smake_list, 2, 2, 0,
  			   Vector Allocation
   ***********************************************************************/
  /* Vector size requests are a multiple of this.  */
@@ -23,7 +23,7 @@ index 9ace9fcbbc..06b889b7da 100644
  /* Round up X to nearest mult-of-ROUNDUP_SIZE --- use at compile time.  */
  #define vroundup_ct(x) ROUNDUP (x, roundup_size)
 diff --git a/src/comp.c b/src/comp.c
-index f7f5f8e19b..a13909724b 100644
+index 0a4d4c255c..6d9699afc3 100644
 --- a/src/comp.c
 +++ b/src/comp.c
 @@ -521,6 +521,25 @@ #define DECL_BLOCK(name, func)				\
@@ -49,7 +49,7 @@ index f7f5f8e19b..a13909724b 100644
 +}
 +#endif
 +
- /* Max number function importable by native compiled code.  */
+ /* Max number function importable by native-compiled code.  */
  #define F_RELOC_MAX_SIZE 1600
  
 @@ -699,7 +718,12 @@ helper_sanitizer_assert (Lisp_Object, Lisp_Object);
@@ -235,10 +235,10 @@ index f7f5f8e19b..a13909724b 100644
  
  
 diff --git a/src/lisp.h b/src/lisp.h
-index 921215aa0a..447d1c0df6 100644
+index 4eec4cbcfd..828312a68e 100644
 --- a/src/lisp.h
 +++ b/src/lisp.h
-@@ -2346,9 +2346,38 @@ CHAR_TABLE_EXTRA_SLOTS (struct Lisp_Char_Table *ct)
+@@ -2362,9 +2362,38 @@ CHAR_TABLE_EXTRA_SLOTS (struct Lisp_Char_Table *ct)
  #else
  /* A platform that uses neither _longjmp nor siglongjmp; assume
     longjmp does not affect the sigmask.  */

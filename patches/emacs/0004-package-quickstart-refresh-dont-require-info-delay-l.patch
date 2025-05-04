@@ -1,7 +1,7 @@
-From ecd3dd8e52324352d08231946fea6286405a3a13 Mon Sep 17 00:00:00 2001
+From c9c7f17041869e3fe3672f9a5be340140cf0daa6 Mon Sep 17 00:00:00 2001
 From: Kien Nguyen <kien.n.quang@gmail.com>
 Date: Tue, 24 Sep 2024 01:24:39 -0700
-Subject: [PATCH 04/11] package-quickstart-refresh: dont require info, delay
+Subject: [PATCH 04/10] package-quickstart-refresh: dont require info, delay
  load instead
 
 ---
@@ -9,10 +9,10 @@ Subject: [PATCH 04/11] package-quickstart-refresh: dont require info, delay
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/lisp/emacs-lisp/package.el b/lisp/emacs-lisp/package.el
-index b29e0a5f56..1c71480d64 100644
+index b9a8dacab1..61f3e9a160 100644
 --- a/lisp/emacs-lisp/package.el
 +++ b/lisp/emacs-lisp/package.el
-@@ -4652,10 +4652,10 @@ package-quickstart-refresh
+@@ -4640,10 +4640,10 @@ package-quickstart-refresh
            (current-buffer))
        (let ((info-dirs (butlast Info-directory-list)))
          (when info-dirs

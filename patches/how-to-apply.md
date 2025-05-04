@@ -6,6 +6,10 @@ dir ..\..\patches\emacs\*.patch | %{git am $_ && mv $_ ..\..\patches\emacs\.appl
 # if conflicts
 git apply --ignore-whitespace ..\..\patches\emacs\<name>.patch --reject
 # resolve conflicts
+<<<<<<< HEAD
+=======
+# remove rej files
+>>>>>>> kiennq/main
 git add .
 git am --continue
 mv ..\..\patches\emacs\<name>.patch ..\..\patches\emacs\.applied\
