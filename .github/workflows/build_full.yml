@@ -15,7 +15,7 @@ jobs:
     name: Prepare build version
     runs-on: ubuntu-latest
     env:
-      EMACS_REPO: https://github.com/emacs-mirror/emacs.git
+      EMACS_REPO: https://github.com/kiennq/emacs.git
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
