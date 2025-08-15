@@ -1,13 +1,13 @@
 diff --git a/src/w32fns.c b/src/w32fns.c
-index 3ee13dcbbdd..8815f3b2e0d 100644
+index 92cc7147a2b..8987629ec9f 100644
 --- a/src/w32fns.c
 +++ b/src/w32fns.c
-@@ -312,7 +312,7 @@ #define MENU_FREE_DELAY 1000
+@@ -315,7 +315,7 @@ int w32_minor_version;
  int w32_build_number;
- 
+
  /* If the OS is set to use dark mode.  */
--BOOL w32_darkmode = FALSE;
-+BOOL w32_darkmode = TRUE;
- 
+-static BOOL w32_darkmode = FALSE;
++static BOOL w32_darkmode = TRUE;
+
  /* Distinguish between Windows NT and Windows 95.  */
  int os_subtype;
