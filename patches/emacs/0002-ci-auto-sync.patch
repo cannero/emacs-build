@@ -1,7 +1,7 @@
-From 2eb2b6df24aeda3ed0e309bd95d25a6016d29472 Mon Sep 17 00:00:00 2001
+From e6e5bd18b0166f8b491c6e4588740967fbf1e741 Mon Sep 17 00:00:00 2001
 From: Kien Nguyen <kien.n.quang@gmail.com>
 Date: Tue, 6 Aug 2024 12:38:45 -0700
-Subject: [PATCH 02/10] ci: auto-sync
+Subject: [PATCH 02/12] ci: auto-sync
 
 ---
  .github/workflows/sync.yml | 32 ++++++++++++++++++++++++++++++++
@@ -11,7 +11,7 @@ Subject: [PATCH 02/10] ci: auto-sync
 
 diff --git a/.github/workflows/sync.yml b/.github/workflows/sync.yml
 new file mode 100644
-index 0000000000..cbaf5f7af6
+index 000000000..e8e074474
 --- /dev/null
 +++ b/.github/workflows/sync.yml
 @@ -0,0 +1,32 @@
@@ -48,7 +48,7 @@ index 0000000000..cbaf5f7af6
 +          echo $upstream_branch | xargs -n1 | xargs -I{} git merge --no-edit upstream/{}
 +          git push origin -f
 diff --git a/.gitignore b/.gitignore
-index 5655ee9924..fb1ceaaca0 100644
+index 5655ee992..fb1ceaaca 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -27,6 +27,7 @@
