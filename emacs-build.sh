@@ -486,7 +486,7 @@ emacs_apply_patches=yes
 emacs_pkg_msix=no
 # This is needed for pacman to return the right text
 export LANG=C
-emacs_repo=https://github.com/emacs-mirror/emacs.git
+emacs_repo=https://github.com/kiennq/emacs.git
 emacs_branch=""
 emacs_build_root=`pwd`
 emacs_build_git_dir="$emacs_build_root/git"
