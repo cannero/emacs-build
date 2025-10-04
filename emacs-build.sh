@@ -278,6 +278,18 @@ function action3_package_deps ()
     package_dependencies "$emacs_depsfile" "`emacs_dependencies`"
 }
 
+function action3_add_additional_files ()
+{
+    # Copy the files from the additional_files directory to the install directory
+    #
+    if [ ! -d "$emacs_build_root" ]; then
+        echo "$emacs_install_dir does not exist, action must be run after install step"
+        return -1
+    fi
+
+    cp -r "$emacs_build_root/additional_files/"* "$emacs_install_dir"
+}
+
 function write_source_info ()
 {
     cd "$emacs_full_install_dir"
@@ -534,6 +546,7 @@ while test -n "$*"; do
         --isync) add_actions action3_isync;;
         --aspell) add_actions action3_aspell;;
         --hunspell) add_actions action3_hunspell;;
+        --add-additional-files) add_actions action3_add_additional_files;;
 
         --test-pdf-tools) add_actions test_epdfinfo;;
         --test-mu) add_actions test_mu;;
