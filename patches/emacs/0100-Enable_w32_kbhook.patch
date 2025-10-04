@@ -1,0 +1,36 @@
+From c4c8dc27c3eff7c5ebae097810800acea6736a65 Mon Sep 17 00:00:00 2001
+From: Kien Nguyen <kien.n.quang@gmail.com>
+Date: Tue, 3 Jun 2025 14:10:46 -0700
+Subject: [PATCH] setup_w32_kbhook: enable it
+
+---
+ src/w32console.c | 2 +-
+ src/w32fns.c     | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/w32console.c b/src/w32console.c
+index 1761db2d943..a5df7946ac5 100644
+--- a/src/w32console.c
++++ b/src/w32console.c
+@@ -1142,7 +1142,7 @@ initialize_w32_display (struct terminal *term, int *width,
+ 		     (LPARAM) &hwnd);
+ 
+   /* Set up the keyboard hook.  */
+-  /* setup_w32_kbdhook (hwnd); */
++  setup_w32_kbdhook (hwnd);
+ 
+   /* Set current_tty to the tty of this terminal */
+   current_tty = term->display_info.tty;
+diff --git a/src/w32fns.c b/src/w32fns.c
+index 77b417dec18..f9de084b1f4 100644
+--- a/src/w32fns.c
++++ b/src/w32fns.c
+@@ -5749,7 +5749,7 @@ w32_wnd_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+ 
+ #ifdef WINDOWSNT
+     case WM_CREATE:
+-      /* setup_w32_kbdhook (hwnd); */
++      setup_w32_kbdhook (hwnd);
+       goto dflt;
+ #endif
+ 
