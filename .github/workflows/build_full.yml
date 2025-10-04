@@ -1,0 +1,152 @@
+# This is a basic workflow to help you get started with Actions
+
+name: build_full
+
+# Controls when the action will run.
+on:
+  #schedule:
+  #  - cron: "0 0 1 * *" # monthly
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  prepare_env:
+    name: Prepare build version
+    runs-on: ubuntu-latest
+    env:
+      EMACS_REPO: https://github.com/kiennq/emacs.git
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get build version
+        id: vars
+        run: |
+          mkdir -p ./git/emacs
+          cd ./git/emacs/
+          git clone --depth 1 $EMACS_REPO .
+          ts=`date +'%Y%m%d'`
+          commit=`git rev-parse --short=7 HEAD`
+          major_ver=`cat configure.ac | grep -Po 'AC_INIT\(.*\[\K\d+'`
+          version=`echo ${major_ver}.${{ github.run_number }}.${ts}.${commit}`
+
+          echo "commit=${commit}" >> $GITHUB_ENV
+          echo "version=${version}" >> $GITHUB_ENV
+          echo "pkg_version=${major_ver}.${{ github.run_number }}.0.0" >> $GITHUB_ENV
+    outputs:
+      repo: ${{ env.EMACS_REPO }}
+      version: ${{ env.version }}
+      pkg_version: ${{ env.pkg_version }}
+      commit: ${{ env.commit }}
+
+  build:
+    needs: prepare_env
+    name: Build Emacs
+    # Matrix strategy from
+    # https://github.com/msys2/MINGW-packages/blob/master/.github/workflows/main.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            shell: powershell
+            msystem: UCRT64
+            build_options: --with-rsvg --without-mps --hunspell
+          - os: windows-2025
+            shell: powershell
+            msystem: UCRT64
+            build_options: --variant mps --with-rsvg --with-mps --enable-build-details --hunspell
+          - os: ubuntu-latest
+            shell: bash
+            build_options: --with-rsvg --with-mps --without-xwidgets
+
+    # The type of runner that the job will run on
+    runs-on: ${{ matrix.os }}
+    env:
+      MSYS2_DIR: C:\msys64
+      EMACS_REPO: ${{ needs.prepare_env.outputs.repo }}
+      EMACS_PKG_VERSION: ${{ needs.prepare_env.outputs.pkg_version }}
+      EMACS_CERT_SECRET: ${{ secrets.EMACS_CERT_SECRET }}
+
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      - name: Setup Msys2
+        uses: msys2/setup-msys2@v2
+        if: runner.os == 'Windows'
+        with:
+          msystem: ${{ matrix.msystem }}
+          release: false
+
+      # This is the shortest job, but in this case it pulls all MSYS/MINGW64
+      - name: Clone Emacs
+        if: runner.os == 'Windows'
+        run: .\emacs-build.cmd --clone --repo %EMACS_REPO% --branch ${{ needs.prepare_env.outputs.commit }}
+
+      - name: Clone Emacs
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p ./git/emacs
+          cd ./git/emacs/
+          git clone --filter=tree:0 --no-checkout $EMACS_REPO .
+          git checkout ${{ needs.prepare_env.outputs.commit }}
+
+      - name: Install deps
+        if: runner.os == 'Windows'
+        run: |
+          .\emacs-build.cmd --slim --ensure ${{ matrix.build_options }}
+        # if ("${{ matrix.build_options }}" -notmatch "--without-mps") { .github/scripts/install-libs.cmd }
+
+      # - name: Install deps
+      #   if: runner.os != 'Windows'
+      #   run: sudo .github/scripts/install-libs.sh
+
+      - name: Build Emacs
+        if: runner.os == 'Windows'
+        timeout-minutes: 30
+        # Require --with-* flags, else the deps will not be included properly
+        run: |
+          .\emacs-build.cmd --slim --branch ${{ needs.prepare_env.outputs.commit }} --configure --build-dev ${{ matrix.build_options }}
+
+      # - name: Install winget
+      #   if: runner.os == 'Windows'
+      #   uses: Cyberboss/install-winget@v1
+      #   with:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install MSIXHeroCLI
+        if: runner.os == 'Windows'
+        run: winget install msixhero --disable-interactivity --accept-source-agreements
+
+      - name: Package Emacs
+        if: runner.os == 'Windows'
+        run: |
+          $env:MSIXHeroCLI = &where.exe MSIXHeroCLI
+          .\emacs-build.cmd --slim --branch ${{ needs.prepare_env.outputs.commit }} --pack-all ${{ matrix.build_options }} --add-additional-files
+
+      - name: Build and pack Emacs
+        if: runner.os != 'Windows'
+        run: |
+          chmod 755 ./emacs-build-unix.sh
+          mkdir -p ./zips
+          #./emacs-build-unix.sh -s ./git/emacs/ -v ${{ needs.prepare_env.outputs.version }} -d ./zips ${{ matrix.build_options }}
+
+      # Upload release for each build
+      - name: Upload binaries to release
+        if: runner.os == 'Windows'
+        id: upload_release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ github.token }}
+          file: ./zips/*{-full.zip,.deb,.msix}
+          file_glob: true
+          tag: v${{ needs.prepare_env.outputs.version }}
+          release_name: emacs_${{ needs.prepare_env.outputs.version }}
+          draft: false
+          prerelease: false
