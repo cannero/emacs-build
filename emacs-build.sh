@@ -451,7 +451,6 @@ var
 
 packing_slim_exclusion="
 .*share/((?!emacs)(?!icons)(?!info)(?!licenses)(?!hunspell))
-.*share/emacs/.*/lisp/play
 "
 
 dependency_exclusions=""
