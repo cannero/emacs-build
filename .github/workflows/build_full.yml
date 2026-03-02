@@ -51,11 +51,11 @@ jobs:
           - os: windows-2025
             shell: powershell
             msystem: UCRT64
-            build_options: --with-rsvg --without-mps --hunspell
+            build_options: --with-rsvg --without-mps --hunspell --no-strip
           - os: windows-2025
             shell: powershell
             msystem: UCRT64
-            build_options: --variant mps --with-rsvg --with-mps --enable-build-details --hunspell
+            build_options: --variant mps --with-rsvg --with-mps --enable-build-details --hunspell --no-strip
 
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
