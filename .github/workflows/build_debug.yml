@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: build_igc3
+name: build_debug
 
 # Controls when the action will run.
 on:
@@ -8,7 +8,7 @@ on:
   #  - cron: "0 0 1 * *" # monthly
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-  #push:
+  push:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -16,8 +16,7 @@ jobs:
     name: Prepare build version
     runs-on: ubuntu-latest
     env:
-      EMACS_REPO: https://github.com/emacs-mirror/emacs.git
-      EMACS_BRANCH: feature/igc3
+      EMACS_REPO: https://github.com/kiennq/emacs.git
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v6
@@ -26,7 +25,7 @@ jobs:
         run: |
           mkdir -p ./git/emacs
           cd ./git/emacs/
-          git clone --depth 1 --branch $EMACS_BRANCH $EMACS_REPO .
+          git clone --depth 1 $EMACS_REPO .
           ts=`date +'%Y%m%d'`
           commit=`git rev-parse --short=8 HEAD`
           major_ver=`cat configure.ac | grep -Po 'AC_INIT\(.*\[\K\d+'`
@@ -50,14 +49,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # - os: windows-2025
+          #   shell: powershell
+          #   msystem: UCRT64
+          #   build_options: --with-rsvg --without-mps --hunspell
           - os: windows-2025
             shell: powershell
             msystem: UCRT64
-            build_options: --with-rsvg --without-mps --hunspell
-          - os: windows-2025
-            shell: powershell
-            msystem: UCRT64
-            build_options: --variant mps --with-rsvg --with-mps --enable-build-details --hunspell
+            build_options: --variant mps --with-rsvg --with-mps --enable-build-details --hunspell --no-strip
 
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
@@ -67,6 +66,7 @@ jobs:
       EMACS_PKG_VERSION: ${{ needs.prepare_env.outputs.pkg_version }}
       EMACS_CERT_SECRET: ${{ secrets.EMACS_CERT_SECRET }}
       MSYSTEM: ${{ matrix.msystem }}
+      CFLAGS: -Og
 
     defaults:
       run:
@@ -90,7 +90,7 @@ jobs:
 
       # This is the shortest job, but in this case it pulls all MSYS/MINGW64
       - name: Clone Emacs
-        run: .\emacs-build.cmd --clone --repo $env:EMACS_REPO --branch $env:EMACS_COMMIT --no-patches
+        run: .\emacs-build.cmd --clone --repo $env:EMACS_REPO --branch $env:EMACS_COMMIT
 
       - name: Install deps
         run: |
@@ -101,7 +101,7 @@ jobs:
         timeout-minutes: 30
         # Require --with-* flags, else the deps will not be included properly
         run: |
-          .\emacs-build.cmd --slim --repo $env:EMACS_REPO --branch $env:EMACS_COMMIT --configure --build-dev ${{ matrix.build_options }}
+          .\emacs-build.cmd --slim --branch $env:EMACS_COMMIT --configure --build-dev ${{ matrix.build_options }}
 
       # - name: Install winget
       #   uses: Cyberboss/install-winget@v1
@@ -117,9 +117,9 @@ jobs:
         run: |
           $env:MSIXHeroCLI = &where.exe MSIXHeroCLI
           if ($env:MSIXHeroCLI) {
-            .\emacs-build.cmd --slim --repo $env:EMACS_REPO --branch $env:EMACS_COMMIT --msix --pack-all ${{ matrix.build_options }}
+            .\emacs-build.cmd --slim --branch $env:EMACS_COMMIT --msix --pack-all ${{ matrix.build_options }}
           } else {
-            .\emacs-build.cmd --slim --repo $env:EMACS_REPO --branch $env:EMACS_COMMIT --pack-all ${{ matrix.build_options }} --add-additional-files
+            .\emacs-build.cmd --slim --branch $env:EMACS_COMMIT --pack-all ${{ matrix.build_options }} --add-additional-files
           }
 
       # Upload release for each build
