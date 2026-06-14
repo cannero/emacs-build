@@ -66,7 +66,6 @@ jobs:
       EMACS_PKG_VERSION: ${{ needs.prepare_env.outputs.pkg_version }}
       EMACS_CERT_SECRET: ${{ secrets.EMACS_CERT_SECRET }}
       MSYSTEM: ${{ matrix.msystem }}
-      CFLAGS: -Og
 
     defaults:
       run:

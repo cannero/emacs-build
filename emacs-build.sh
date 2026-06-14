@@ -485,7 +485,7 @@ export LDFLAGS="${LDFLAGS} -lpthread"
 #         -fomit-frame-pointer \
 #         -fallow-store-data-races  -fno-semantic-interposition -floop-parallelize-all -ftree-parallelize-loops=4 \
 #         -g -pipe"
-CFLAGS="-O2 -fno-semantic-interposition -g $CFLAGS"
+CFLAGS="-Og -fno-semantic-interposition -g $CFLAGS"
 
 while test -n "$*"; do
     case $1 in
